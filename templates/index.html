@@ -1,0 +1,924 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Browser Cache Viewer</title>
+    <!-- Use Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&family=Inter:wght@400;500;700&display=swap"
+        rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --surface-color: #1e293b;
+            --surface-highlight: #334155;
+            --text-primary: #f8fafc;
+            --text-secondary: #94a3b8;
+            --accent-color: #3b82f6;
+            --accent-hover: #60a5fa;
+            --danger-color: #ef4444;
+            --success-color: #10b981;
+
+            --glass-bg: rgba(30, 41, 59, 0.7);
+            --glass-border: rgba(255, 255, 255, 0.1);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            background-image:
+                radial-gradient(circle at 15% 50%, rgba(59, 130, 246, 0.15), transparent 25%),
+                radial-gradient(circle at 85% 30%, rgba(16, 185, 129, 0.1), transparent 25%);
+        }
+
+        header {
+            padding: 1rem 2rem;
+            background: var(--glass-bg);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--glass-border);
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+            z-index: 10;
+        }
+
+        .header-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        h1 {
+            font-family: 'Outfit', sans-serif;
+            font-weight: 600;
+            font-size: 1.5rem;
+            letter-spacing: -0.5px;
+            background: linear-gradient(135deg, #60a5fa, #a78bfa);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .controls {
+            display: flex;
+            gap: 0.75rem;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .controls-path {
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+            flex: 1;
+            min-width: 0;
+        }
+
+        .controls-path input[type="text"] {
+            flex: 1;
+            min-width: 200px;
+        }
+
+        .controls-actions {
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+        }
+
+        input[type="text"] {
+            background: rgba(15, 23, 42, 0.6);
+            border: 1px solid var(--glass-border);
+            color: var(--text-primary);
+            padding: 0.6rem 1rem;
+            border-radius: 8px;
+            font-family: 'Inter', sans-serif;
+            min-width: 300px;
+            outline: none;
+            transition: all 0.2s ease;
+        }
+
+        input[type="text"]:focus {
+            border-color: var(--accent-color);
+            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+        }
+
+        button {
+            background: var(--accent-color);
+            color: white;
+            border: none;
+            padding: 0.6rem 1.2rem;
+            border-radius: 8px;
+            font-family: 'Inter', sans-serif;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        button:hover {
+            background: var(--accent-hover);
+            transform: translateY(-1px);
+        }
+
+        select {
+            background: rgba(15, 23, 42, 0.6);
+            border: 1px solid var(--glass-border);
+            color: var(--text-primary);
+            padding: 0.6rem;
+            border-radius: 8px;
+            outline: none;
+        }
+
+        .main-container {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+            padding: 1rem;
+            gap: 1rem;
+        }
+
+        .sidebar {
+            width: 450px;
+            background: var(--glass-bg);
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--glass-border);
+            border-radius: 12px;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .filter-bar {
+            padding: 1rem;
+            border-bottom: 1px solid var(--glass-border);
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .filter-bar input {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .list-container {
+            flex: 1;
+            overflow-y: auto;
+        }
+
+        .cache-item {
+            padding: 1rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            cursor: pointer;
+            transition: all 0.15s ease;
+            position: relative;
+        }
+
+        .cache-item:hover {
+            background: var(--surface-highlight);
+        }
+
+        .cache-item.active {
+            background: rgba(59, 130, 246, 0.15);
+            border-left: 3px solid var(--accent-color);
+        }
+
+        .item-url {
+            font-size: 0.9rem;
+            word-break: break-all;
+            margin-bottom: 0.4rem;
+            color: var(--text-primary);
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .item-meta {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+        }
+
+        .type-badge {
+            background: rgba(148, 163, 184, 0.2);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: monospace;
+        }
+
+        .type-badge.html {
+            background: rgba(59, 130, 246, 0.2);
+            color: #93c5fd;
+        }
+
+        .type-badge.image {
+            background: rgba(16, 185, 129, 0.2);
+            color: #6ee7b7;
+        }
+
+        .type-badge.json {
+            background: rgba(245, 158, 11, 0.2);
+            color: #fcd34d;
+        }
+
+        .type-badge.script {
+            background: rgba(239, 68, 68, 0.2);
+            color: #fca5a5;
+        }
+
+        .preview-pane {
+            flex: 1;
+            background: var(--glass-bg);
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--glass-border);
+            border-radius: 12px;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .preview-header {
+            padding: 0;
+            border-bottom: 1px solid var(--glass-border);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .preview-top-bar {
+            padding: 1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .preview-title {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            font-family: monospace;
+            word-break: break-all;
+            margin-right: 1rem;
+        }
+
+        .preview-actions {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .preview-actions button {
+            padding: 0.4rem 0.8rem;
+            font-size: 0.8rem;
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .preview-actions button:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .preview-content {
+            flex: 1;
+            display: grid;
+            place-items: center;
+            overflow: auto;
+            background: var(--bg-color);
+            background-image: radial-gradient(circle at center, rgba(59, 130, 246, 0.05) 0%, transparent 70%);
+            position: relative;
+        }
+
+        .preview-content.has-image {
+            background-image:
+                radial-gradient(circle at center, rgba(59, 130, 246, 0.05) 0%, transparent 70%),
+                repeating-conic-gradient(#1e293b 0% 25%, #0f172a 0% 50%) 50% / 20px 20px;
+        }
+
+        iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+            background: white;
+            display: none;
+        }
+
+        img.preview-img {
+            max-width: 90%;
+            max-height: 90%;
+            object-fit: contain;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+            border-radius: 4px;
+            display: none;
+        }
+
+        .text-preview {
+            width: 100%;
+            height: 100%;
+            padding: 1.5rem;
+            font-family: monospace;
+            font-size: 0.85rem;
+            color: #e2e8f0;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            overflow: auto;
+            background: #0f172a;
+        }
+
+
+        .empty-state {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 1.5rem;
+            color: var(--text-secondary);
+            text-align: center;
+            padding: 2rem;
+            z-index: 1;
+        }
+
+        .empty-state svg {
+            width: 80px;
+            height: 80px;
+            opacity: 0.3;
+            color: var(--accent-color);
+            filter: drop-shadow(0 0 15px rgba(59, 130, 246, 0.2));
+        }
+
+        .empty-state p {
+            font-size: 1.1rem;
+            max-width: 300px;
+            line-height: 1.6;
+        }
+
+        .loading-spinner {
+            border: 3px solid rgba(255, 255, 255, 0.1);
+            border-radius: 50%;
+            border-top: 3px solid var(--accent-color);
+            width: 24px;
+            height: 24px;
+            animation: spin 1s linear infinite;
+            display: none;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        /* Scrollbar styling */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.2);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        /* Responsive: Tablet */
+        @media (max-width: 1024px) {
+            header {
+                padding: 0.75rem 1rem;
+            }
+
+            .controls-path {
+                flex: 1 1 100%;
+            }
+
+            .main-container {
+                flex-direction: column;
+            }
+
+            .sidebar {
+                width: 100%;
+                max-height: 40vh;
+            }
+
+            .preview-pane {
+                min-height: 50vh;
+            }
+        }
+
+        /* Responsive: Mobile */
+        @media (max-width: 640px) {
+            header {
+                padding: 0.5rem 0.75rem;
+            }
+
+            h1 {
+                font-size: 1.2rem;
+            }
+
+            .controls {
+                gap: 0.4rem;
+            }
+
+            .controls-path {
+                flex-direction: column;
+            }
+
+            .controls-path input[type="text"] {
+                min-width: 0;
+                width: 100%;
+            }
+
+            .controls-actions {
+                width: 100%;
+                justify-content: stretch;
+            }
+
+            .controls-actions button {
+                flex: 1;
+            }
+
+            .controls button,
+            .controls select {
+                font-size: 0.8rem;
+                padding: 0.5rem 0.8rem;
+            }
+
+            .main-container {
+                padding: 0.5rem;
+                gap: 0.5rem;
+            }
+
+            .sidebar {
+                max-height: 35vh;
+                border-radius: 8px;
+            }
+
+            .filter-bar {
+                flex-wrap: wrap;
+                padding: 0.6rem;
+            }
+
+            .filter-bar input,
+            .filter-bar select {
+                font-size: 0.8rem;
+            }
+
+            .cache-item {
+                padding: 0.7rem;
+            }
+
+            .item-url {
+                font-size: 0.8rem;
+            }
+
+            .preview-pane {
+                border-radius: 8px;
+                min-height: 45vh;
+            }
+
+            .preview-top-bar {
+                padding: 0.7rem;
+                flex-direction: column;
+                gap: 0.5rem;
+                align-items: flex-start;
+            }
+
+            .preview-title {
+                font-size: 0.8rem;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <header>
+        <div class="header-top">
+            <h1>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
+                    <line x1="8" y1="21" x2="16" y2="21"></line>
+                    <line x1="12" y1="17" x2="12" y2="21"></line>
+                </svg>
+                Cache Viewer
+            </h1>
+        </div>
+        <div class="controls">
+            <div class="controls-path">
+                <button onclick="document.getElementById('cache-dir').value='{{ chrome_dir }}'"
+                    style="background: rgba(255,255,255,0.1);">Chrome</button>
+                <button onclick="document.getElementById('cache-dir').value='{{ firefox_dir }}'"
+                    style="background: rgba(255,255,255,0.1);">Firefox</button>
+                <input type="text" id="cache-dir" value="{{ chrome_dir }}" placeholder="Path to Cache Directory"
+                    spellcheck="false">
+            </div>
+            <div class="controls-actions">
+                <button id="load-btn" onclick="loadCache()">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 2v6h-6"></path>
+                        <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path>
+                        <path d="M3 3v6h6"></path>
+                    </svg>
+                    Load Cache
+                </button>
+                <input type="file" id="upload-input" accept=".zip" style="display:none;" onchange="uploadCache(this)">
+                <button onclick="document.getElementById('upload-input').click()"
+                    style="background: var(--success-color);">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                        <polyline points="17 8 12 3 7 8"></polyline>
+                        <line x1="12" y1="3" x2="12" y2="15"></line>
+                    </svg>
+                    Upload ZIP
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <div class="main-container">
+        <aside class="sidebar">
+            <div class="filter-bar">
+                <input type="text" id="search-input" placeholder="Search URLs..." oninput="filterEntries()">
+                <select id="type-filter" onchange="filterEntries()">
+                    <option value="all">All Types</option>
+                    <option value="html">HTML</option>
+                    <option value="image">Images</option>
+                    <option value="json">JSON</option>
+                    <option value="script">Scripts</option>
+                </select>
+            </div>
+            <div class="filter-bar"
+                style="border-top: none; padding-top: 0; gap: 0.5rem; justify-content: space-between;">
+                <input type="datetime-local" id="date-from" onchange="filterEntries()"
+                    style="font-size: 0.75rem; padding: 0.4rem; background: rgba(15, 23, 42, 0.6); color: var(--text-primary); border: 1px solid var(--glass-border); border-radius: 6px;">
+                <span
+                    style="display:flex; align-items:center; color: var(--text-secondary); font-size: 0.8rem;">to</span>
+                <input type="datetime-local" id="date-to" onchange="filterEntries()"
+                    style="font-size: 0.75rem; padding: 0.4rem; background: rgba(15, 23, 42, 0.6); color: var(--text-primary); border: 1px solid var(--glass-border); border-radius: 6px;">
+            </div>
+            <div class="filter-bar" style="border-top: none; padding-top: 0; gap: 0.5rem; justify-content: flex-end;">
+                <button onclick="exportReport('csv')"
+                    style="font-size: 0.75rem; padding: 0.4rem 0.8rem; background: rgba(255,255,255,0.05); border: 1px solid var(--glass-border);">CSV</button>
+                <button onclick="exportReport('json')"
+                    style="font-size: 0.75rem; padding: 0.4rem 0.8rem; background: rgba(255,255,255,0.05); border: 1px solid var(--glass-border);">JSON</button>
+            </div>
+
+            <div class="list-container" id="entries-list">
+                <div class="empty-state">
+                    Enter a cache directory and click 'Load Cache'.
+                </div>
+            </div>
+        </aside>
+
+        <main class="preview-pane">
+            <div class="preview-header">
+                <div class="preview-top-bar">
+                    <div class="preview-title" id="preview-url">No item selected</div>
+                    <div class="preview-actions" id="preview-actions" style="display: none;">
+                        <button onclick="openInNewTab()">Raw</button>
+                        <button onclick="downloadItem()" id="download-btn">Download</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="preview-content" id="preview-stage">
+                <div class="empty-state" id="empty-preview">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                        <circle cx="12" cy="12" r="3"></circle>
+                    </svg>
+                    <p>Select a cache entry to view its contents.</p>
+                </div>
+                <div class="loading-spinner" id="preview-loader"></div>
+
+                <iframe id="preview-iframe" sandbox="allow-same-origin allow-scripts"></iframe>
+                <img id="preview-image" class="preview-img" alt="Cache Image">
+                <div id="preview-text" class="text-preview"></div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        let currentEntries = [];
+        let currentFilteredEntries = [];
+        let currentlySelectedId = null;
+
+        function saveState() {
+            const state = {
+                cacheDir: document.getElementById('cache-dir').value,
+                search: document.getElementById('search-input').value,
+                type: document.getElementById('type-filter').value,
+                dateFrom: document.getElementById('date-from').value,
+                dateTo: document.getElementById('date-to').value
+            };
+            localStorage.setItem('cacheViewerState', JSON.stringify(state));
+        }
+
+        async function loadState() {
+            const saved = localStorage.getItem('cacheViewerState');
+            if (!saved) return;
+
+            try {
+                const state = JSON.parse(saved);
+                if (state.cacheDir) document.getElementById('cache-dir').value = state.cacheDir;
+                if (state.search) document.getElementById('search-input').value = state.search;
+                if (state.type) document.getElementById('type-filter').value = state.type;
+                if (state.dateFrom) document.getElementById('date-from').value = state.dateFrom;
+                if (state.dateTo) document.getElementById('date-to').value = state.dateTo;
+
+                if (state.cacheDir) {
+                    await loadCache();
+                }
+            } catch (e) {
+                console.error("Failed to load saved state", e);
+            }
+        }
+
+        window.addEventListener('load', loadState);
+
+        function getBadgeClass(mime) {
+            if (mime.includes('html')) return 'html';
+            if (mime.includes('image')) return 'image';
+            if (mime.includes('json')) return 'json';
+            if (mime.includes('javascript') || mime.includes('x-javascript')) return 'script';
+            return 'other';
+        }
+
+        function getShortType(mime) {
+            if (mime.includes('html')) return 'HTML';
+            if (mime.includes('image/')) return mime.split('/')[1].toUpperCase();
+            if (mime.includes('json')) return 'JSON';
+            if (mime.includes('javascript')) return 'JS';
+            if (mime.includes('css')) return 'CSS';
+            return mime.split('/')[1] || mime;
+        }
+
+        async function uploadCache(input) {
+            if (!input.files || !input.files[0]) return;
+            const file = input.files[0];
+            const listEl = document.getElementById('entries-list');
+            const loadBtn = document.getElementById('load-btn');
+
+            listEl.innerHTML = '<div class="empty-state"><div class="loading-spinner" style="display:block;"></div><p>Uploading & extracting cache...</p></div>';
+            loadBtn.disabled = true;
+
+            try {
+                const formData = new FormData();
+                formData.append('file', file);
+
+                const res = await fetch('/api/cache/upload', { method: 'POST', body: formData });
+                const data = await res.json();
+
+                if (!data.success) {
+                    throw new Error(data.error);
+                }
+
+                // Set the extracted path in the input and load it
+                document.getElementById('cache-dir').value = data.cache_dir;
+                saveState();
+                await loadCache();
+            } catch (err) {
+                listEl.innerHTML = `<div class="empty-state" style="color: var(--danger-color)">
+                    <p>Upload Error:</p>
+                    <p style="font-size:0.8rem; font-family:monospace">${err.message}</p>
+                </div>`;
+            } finally {
+                loadBtn.disabled = false;
+                input.value = ''; // Reset file input
+            }
+        }
+
+        async function loadCache() {
+            const dir = document.getElementById('cache-dir').value;
+            saveState();
+            const listEl = document.getElementById('entries-list');
+            const loadBtn = document.getElementById('load-btn');
+
+            listEl.innerHTML = '<div class="empty-state"><div class="loading-spinner" style="display:block;"></div><p>Scanning Cache...</p></div>';
+            loadBtn.disabled = true;
+
+            try {
+                const res = await fetch(`/api/cache/list?dir=${encodeURIComponent(dir)}`);
+                const data = await res.json();
+
+                if (!data.success) {
+                    throw new Error(data.error);
+                }
+
+                currentEntries = data.entries;
+                filterEntries();
+
+            } catch (err) {
+                listEl.innerHTML = `<div class="empty-state" style="color: var(--danger-color)">
+                    <p>Error loading cache:</p>
+                    <p style="font-size:0.8rem; font-family:monospace">${err.message}</p>
+                </div>`;
+            } finally {
+                loadBtn.disabled = false;
+            }
+        }
+
+        function filterEntries() {
+            const query = document.getElementById('search-input').value.toLowerCase();
+            const typeFilter = document.getElementById('type-filter').value;
+            const dateFrom = document.getElementById('date-from').value;
+            const dateTo = document.getElementById('date-to').value;
+            const listEl = document.getElementById('entries-list');
+
+            const fromTime = dateFrom ? new Date(dateFrom).getTime() : -Infinity;
+            const toTime = dateTo ? new Date(dateTo).getTime() : Infinity;
+
+            const filtered = currentEntries.filter(entry => {
+                const matchQuery = entry.url.toLowerCase().includes(query);
+                let matchType = true;
+
+                if (typeFilter !== 'all') {
+                    const badge = getBadgeClass(entry.mime);
+                    matchType = badge === typeFilter;
+                }
+
+                let matchTime = true;
+                if (dateFrom || dateTo) {
+                    if (entry.request_time) {
+                        const entryTime = new Date(entry.request_time).getTime();
+                        matchTime = entryTime >= fromTime && entryTime <= toTime;
+                    } else {
+                        matchTime = false;
+                    }
+                }
+
+                return matchQuery && matchType && matchTime;
+            });
+
+            currentFilteredEntries = filtered;
+            saveState();
+
+            if (filtered.length === 0) {
+                listEl.innerHTML = '<div class="empty-state">No matching entries found.</div>';
+                return;
+            }
+
+            listEl.innerHTML = '';
+
+            const limit = Math.min(filtered.length, 500);
+
+            for (let i = 0; i < limit; i++) {
+                const entry = filtered[i];
+                const date = entry.request_time ? new Date(entry.request_time).toLocaleString() : 'Unknown Date';
+
+                const div = document.createElement('div');
+                div.className = `cache-item ${currentlySelectedId === entry.id ? 'active' : ''}`;
+                div.onclick = () => selectItem(entry, div);
+
+                div.innerHTML = `
+                    <div class="item-url" title="${entry.url}">${entry.url}</div>
+                    <div class="item-meta">
+                        <span class="type-badge ${getBadgeClass(entry.mime)}">${getShortType(entry.mime)}</span>
+                        <span>${date}</span>
+                    </div>
+                `;
+                listEl.appendChild(div);
+            }
+        }
+
+        async function selectItem(entry, element) {
+            document.querySelectorAll('.cache-item').forEach(el => el.classList.remove('active'));
+            element.classList.add('active');
+            currentlySelectedId = entry.id;
+
+            document.getElementById('empty-preview').style.display = 'none';
+            document.getElementById('preview-iframe').style.display = 'none';
+            document.getElementById('preview-image').style.display = 'none';
+            document.getElementById('preview-text').style.display = 'none';
+            document.getElementById('preview-actions').style.display = 'flex';
+            document.getElementById('preview-url').textContent = entry.url;
+
+            const loader = document.getElementById('preview-loader');
+            loader.style.display = 'block';
+
+            const dir = document.getElementById('cache-dir').value;
+            const resourceUrl = `/api/cache/view/${entry.id}?dir=${encodeURIComponent(dir)}`;
+
+            const downloadBtn = document.getElementById('download-btn');
+            downloadBtn.onclick = () => {
+                const a = document.createElement('a');
+                a.href = resourceUrl;
+                a.download = '';
+                a.click();
+            };
+
+            const stage = document.getElementById('preview-stage');
+            stage.classList.remove('has-image');
+
+            const isImage = entry.mime.includes('image');
+            const isHTML = entry.mime === 'text/html';
+            const isTextOrJson = entry.mime.includes('text') || entry.mime.includes('json') || entry.mime.includes('javascript') || entry.mime.includes('xml');
+
+            if (isImage) {
+                stage.classList.add('has-image');
+                const img = document.getElementById('preview-image');
+                img.onload = () => loader.style.display = 'none';
+                img.src = resourceUrl;
+                img.style.display = 'block';
+            } else if (isHTML) {
+                const iframe = document.getElementById('preview-iframe');
+                loader.style.display = 'none';
+                iframe.src = resourceUrl;
+                iframe.style.display = 'block';
+            } else if (isTextOrJson) {
+                try {
+                    const response = await fetch(resourceUrl);
+                    const text = await response.text();
+                    const textDiv = document.getElementById('preview-text');
+                    loader.style.display = 'none';
+                    textDiv.textContent = text;
+                    textDiv.style.display = 'block';
+                } catch {
+                    loader.style.display = 'none';
+                    document.getElementById('empty-preview').innerHTML = '<p>Could not load text.</p>';
+                    document.getElementById('empty-preview').style.display = 'flex';
+                }
+            } else {
+                loader.style.display = 'none';
+                document.getElementById('empty-preview').innerHTML = `<p>Cannot preview file type: ${entry.mime}.</p><p>Please use Download.</p>`;
+                document.getElementById('empty-preview').style.display = 'flex';
+            }
+        }
+
+        function openInNewTab() {
+            if (!currentlySelectedId) return;
+            const dir = document.getElementById('cache-dir').value;
+            const resourceUrl = `/api/cache/view/${currentlySelectedId}?dir=${encodeURIComponent(dir)}`;
+            window.open(resourceUrl, '_blank');
+        }
+
+        function exportReport(format) {
+            if (currentFilteredEntries.length === 0) {
+                alert("No entries to export.");
+                return;
+            }
+
+            let content = "";
+            let filename = `cache_report_${new Date().getTime()}.${format}`;
+            let mimeType = format === 'csv' ? 'text/csv' : 'application/json';
+
+            if (format === 'json') {
+                content = JSON.stringify(currentFilteredEntries, null, 2);
+            } else {
+                // CSV Header
+                const headers = ["ID", "URL", "Request Time", "Response Time", "MIME Type", "Content Length"];
+                content = headers.join(",") + "\n";
+
+                currentFilteredEntries.forEach(entry => {
+                    const row = [
+                        entry.id,
+                        `"${entry.url.replace(/"/g, '""')}"`,
+                        entry.request_time || "",
+                        entry.response_time || "",
+                        entry.mime || "",
+                        entry.content_length || ""
+                    ];
+                    content += row.join(",") + "\n";
+                });
+            }
+
+            const blob = new Blob([content], { type: mimeType });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+    </script>
+</body>
+
+</html>

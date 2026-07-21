@@ -1,0 +1,16 @@
+services:
+  cache-viewer:
+    build: .
+    ports:
+      - "${PORT:-5000}:5000"
+    environment:
+      # Paths as seen *inside* the container (see the read-only mounts below).
+      - CHROME_CACHE_DIR=/data/chromium/Default/Cache/Cache_Data
+      - FIREFOX_CACHE_BASE=/data/firefox/
+      - FLASK_DEBUG=0
+    volumes:
+      # Point HOST_CHROME_CACHE / HOST_FIREFOX_CACHE at your own browser caches.
+      # Defaults assume a Linux profile; override in a .env file next to this one.
+      - "${HOST_CHROME_CACHE:-~/.cache/chromium}:/data/chromium:ro"
+      - "${HOST_FIREFOX_CACHE:-~/.cache/mozilla/firefox}:/data/firefox:ro"
+    restart: unless-stopped
