@@ -59,23 +59,34 @@ No cloning, no build. Pull and run the container, then open the app and
 **drag-and-drop a `.zip` of a browser cache folder** to analyse it:
 
 ```bash
-docker run --rm -p 5000:5000 ghcr.io/<your-github-username>/browser-cache-viewer:latest
+docker pull sc4v3g3r/browser-cache-viewer
+docker run --rm -p 5000:5000 sc4v3g3r/browser-cache-viewer:latest
 ```
 
 Then open **http://127.0.0.1:5000** and use the upload panel.
 
 To analyse a cache **already on your machine** (live analysis), mount it
-read-only and point the app at it:
+read-only and point the app at it. On **Linux/macOS**:
 
 ```bash
 docker run --rm -p 5000:5000 \
   -e CHROME_CACHE_DIR=/data/chromium/Default/Cache/Cache_Data \
+  -e FIREFOX_CACHE_BASE=/data/firefox \
   -v "$HOME/.cache/chromium:/data/chromium:ro" \
-  ghcr.io/<your-github-username>/browser-cache-viewer:latest
+  -v "$HOME/.cache/mozilla/firefox:/data/firefox:ro" \
+  sc4v3g3r/browser-cache-viewer:latest
 ```
 
-> The image is published automatically by GitHub Actions on every push to
-> `main` and every `v*` tag (see `.github/workflows/docker-publish.yml`).
+On **Windows (PowerShell)** — the drag-and-drop `.zip` upload is the simplest
+route, but to mount live caches use the Windows paths:
+
+```powershell
+docker run --rm -p 5000:5000 -e CHROME_CACHE_DIR=/data/chromium/Cache_Data -v "$env:LOCALAPPDATA\Google\Chrome\User Data\Default\Cache\Cache_Data:/data/chromium/Cache_Data:ro" sc4v3g3r/browser-cache-viewer:latest
+```
+
+> The image is also published to GitHub Container Registry via GitHub Actions on
+> every push to `main` and every `v*` tag (see
+> `.github/workflows/docker-publish.yml`).
 
 ### 1. Run locally (Python)
 
