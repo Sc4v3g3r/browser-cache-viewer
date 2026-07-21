@@ -10,7 +10,7 @@ used in digital forensics and incident response to reconstruct a user's web
 activity from local artifacts.
 
 
-> own or are explicitly permitted to examine. See [Security notes](#security-notes).
+> See [Security notes](#security-notes).
 
 ---
 
