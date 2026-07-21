@@ -131,19 +131,7 @@ Typical cache locations:
 - **Chrome (Windows):** `%LocalAppData%\Google\Chrome\User Data\Default\Cache\Cache_Data`
 - **Firefox:** inside `<profile>/cache2/entries` under your OS Firefox profiles folder.
 
----
 
-## Publishing updates to Docker Hub
-
-After changing the code, rebuild and push a new image:
-
-```bash
-docker build -t sc4v3g3r/browser-cache-viewer:latest .
-docker login
-docker push sc4v3g3r/browser-cache-viewer:latest
-```
-
----
 
 ## How it works
 
