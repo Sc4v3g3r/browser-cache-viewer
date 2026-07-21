@@ -9,7 +9,7 @@ Built as a learning project in browser forensics — the same category of toolin
 used in digital forensics and incident response to reconstruct a user's web
 activity from local artifacts.
 
-> ⚠️ **For local, authorised analysis only.** Only inspect caches on systems you
+
 > own or are explicitly permitted to examine. See [Security notes](#security-notes).
 
 ---
