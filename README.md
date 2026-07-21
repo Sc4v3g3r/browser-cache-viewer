@@ -53,6 +53,30 @@ browser-cache-viewer/
 
 ## Getting started
 
+### Quickest: run the published image
+
+No cloning, no build. Pull and run the container, then open the app and
+**drag-and-drop a `.zip` of a browser cache folder** to analyse it:
+
+```bash
+docker run --rm -p 5000:5000 ghcr.io/<your-github-username>/browser-cache-viewer:latest
+```
+
+Then open **http://127.0.0.1:5000** and use the upload panel.
+
+To analyse a cache **already on your machine** (live analysis), mount it
+read-only and point the app at it:
+
+```bash
+docker run --rm -p 5000:5000 \
+  -e CHROME_CACHE_DIR=/data/chromium/Default/Cache/Cache_Data \
+  -v "$HOME/.cache/chromium:/data/chromium:ro" \
+  ghcr.io/<your-github-username>/browser-cache-viewer:latest
+```
+
+> The image is published automatically by GitHub Actions on every push to
+> `main` and every `v*` tag (see `.github/workflows/docker-publish.yml`).
+
 ### 1. Run locally (Python)
 
 Requires **Python 3.10+** and **git** (for one dependency).
